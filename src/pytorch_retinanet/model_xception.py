@@ -70,11 +70,16 @@ class AlignedXception(nn.Module):
         #         m.bias.data.zero_()
         # #-----------------------------
 
-    def forward(self, inputs):
+    def forward(self, inputs, fc = False):
         res = []
+        
+        img_batch = inputs
+        if fc == True:
+            x=img_batch
+        else:
+            x = torch.cat([img_batch, img_batch, img_batch], dim=1)
 
-        x = torch.cat([inputs, inputs, inputs], dim=1)
-
+        # x = torch.cat([inputs, inputs, inputs], dim=1)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -129,9 +134,11 @@ def xception_model(num_classes, pretrained=True, **kwargs):
         state_dict = model_zoo.load_url(
             pretrained_settings['xception']['imagenet']['url'],
             model_dir='models')
-        for name, weights in state_dict.items():
-            if 'pointwise' in name:
-                state_dict[name] = weights.unsqueeze(-1).unsqueeze(-1)
+           
+        # for name, weights in state_dict.items():
+        #     print(name)
+        #     if 'pointwise' in name:
+        #         state_dict[name] = weights.unsqueeze(-1).unsqueeze(-1)
         encoder.load_state_dict(state_dict)
 
     model = RetinaNet(encoder=encoder, num_classes=num_classes, **kwargs)

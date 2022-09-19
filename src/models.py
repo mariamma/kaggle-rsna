@@ -180,14 +180,14 @@ MODELS = {
         factory=pytorch_retinanet.model_incresv2.inceptionresnetv2,
         args=dict(num_classes=1, pretrained=True),
         img_size=512,
-        batch_size=4,
+        batch_size=2,
         dataset_args=dict(augmentation_level=20),
     ),
     "inc_resnet_v2_512_dr": ModelInfo(
         factory=pytorch_retinanet.model_incresv2.inceptionresnetv2,
         args=dict(num_classes=1, pretrained=True, dropout_cls=0.6, dropout_global_cls=0.6),
         img_size=512,
-        batch_size=4,
+        batch_size=2,
         dataset_args=dict(augmentation_level=20),
     ),
     "inc_resnet_v2_256": ModelInfo(
@@ -201,14 +201,14 @@ MODELS = {
         factory=pytorch_retinanet.model_resnet.resnet50,
         args=dict(num_classes=1, pretrained=True, dropout_cls=0.5, dropout_global_cls=0.5),
         img_size=512,
-        batch_size=12,
+        batch_size=4,
         dataset_args=dict(augmentation_level=15),
     ),
     "se_resnext50_512": ModelInfo(
         factory=pytorch_retinanet.model_se_resnext.se_resnext50,
         args=dict(num_classes=1, pretrained="imagenet", dropout=0.5),
         img_size=512,
-        batch_size=8,
+        batch_size=3,
         dataset_args=dict(augmentation_level=20),
     ),
     "se_resnext50_512_dr0.8": ModelInfo(
@@ -229,7 +229,7 @@ MODELS = {
         factory=pytorch_retinanet.model_xception.xception_model,
         args=dict(num_classes=1, pretrained=True, dropout_cls=0.6, dropout_global_cls=0.6),
         img_size=512,
-        batch_size=6,
+        batch_size=4,
         dataset_args=dict(augmentation_level=20),
     ),
 }

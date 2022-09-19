@@ -7,12 +7,14 @@ import torch.utils.model_zoo as model_zoo
 from .utils import BasicBlock, Bottleneck, BBoxTransform, ClipBoxes
 from .anchors import Anchors
 from . import losses
-from .lib.nms.pth_nms import pth_nms
+#from .lib.nms.pth_nms import pth_nms
+from .lib.nms.gpu_nms import gpu_nms
 
 def nms(dets, thresh):
     "Dispatch to either CPU or GPU NMS implementations.\
     Accept dets as tensor"""
-    return pth_nms(dets, thresh)
+    #return pth_nms(dets, thresh)
+    return gpu_nms(dets, thresh)
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -226,6 +228,24 @@ class RetinaNetEncoder(nn.Module):
         raise NotImplementedError()
 
 
+class fc_m1_m4(nn.Module):
+    def __init__(self):
+        super(fc_m1_m4,self).__init__()
+        self.transition_layer = nn.Conv2d(2048, 2048, kernel_size=3, padding=1, stride=1, bias=False)
+        self.gap = nn.AvgPool2d(16, 16)
+        # self.prediction_layer = nn.Sequential(nn.Linear(2048, 15), nn.Sigmoid())
+        self.prediction_layer = nn.Sequential(nn.Linear(2048, 15))
+        self.sigmoid_layer = nn.Sigmoid()
+
+    def forward(self,x):
+        x = self.transition_layer(x)
+        cam_activations = x
+        x = self.gap(x)
+        x = torch.squeeze(x)
+        out1 = self.prediction_layer(x)
+        out2 = self.sigmoid_layer(out1)
+        return cam_activations, out1, out2
+
 class RetinaNet(nn.Module):
     def __init__(self, encoder: RetinaNetEncoder,
                  num_classes,
@@ -238,6 +258,7 @@ class RetinaNet(nn.Module):
 
         # self.encoder = encoder
         fpn_sizes = encoder.fpn_sizes
+        self.fc_m1_m4 = fc_m1_m4()
         self.use_l2_features = use_l2_features
 
         self.fpn = PyramidFeatures(fpn_sizes[0], fpn_sizes[1], fpn_sizes[2], fpn_sizes[3], use_l2_features=use_l2_features)
@@ -313,13 +334,20 @@ class RetinaNet(nn.Module):
             scores = scores[:, scores_over_thresh, :]
 
             # use very low threshold of 0.05 as boxes should not overlap
-            anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.05)
+            anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2).cpu().detach().numpy()[0, :, :], 0.05)
 
             nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
 
             return [nms_scores, global_classification, transformed_anchors[0, anchors_nms_idx, :]]
 
-    def forward(self, inputs, return_loss, return_boxes, return_raw=False):
+    def forward(self, inputs, return_loss, return_boxes, return_raw=False, fc=False):
+        if fc == True:
+            img_batch = inputs["data"]
+            x1, x2, x3, x4 = self.encoder.forward(img_batch, fc)
+            cam_activations_m1_m4, fc_output_m1_m4, fc_output_m1_m4_sigmoid = self.fc_m1_m4(x4)
+            #print(fc_output_m1.shape)
+            return cam_activations_m1_m4, fc_output_m1_m4, fc_output_m1_m4_sigmoid
+
         if return_loss:
             img_batch, annotations, global_annotations = inputs
         else:
@@ -343,11 +371,11 @@ class RetinaNet(nn.Module):
         res = []
 
         if return_loss:
-            res += list(self.focalLoss(classification, regression, anchors, annotations))
-            res += [self.globalClassificationLoss(global_classification, global_annotations)]
+            res = res + list(self.focalLoss(classification, regression, anchors, annotations))
+            res = res + [self.globalClassificationLoss(global_classification, global_annotations)]
 
         if return_boxes:
-            res += self.boxes(img_batch=img_batch,
+            res = res + self.boxes(img_batch=img_batch,
                               regression=regression,
                               classification=classification,
                               global_classification=global_classification,

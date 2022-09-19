@@ -7,7 +7,8 @@ import torch.utils.model_zoo as model_zoo
 from .utils import BasicBlock, Bottleneck, BBoxTransform, ClipBoxes
 from .anchors import Anchors
 from . import losses
-from .lib.nms.pth_nms import pth_nms
+# from .lib.nms.pth_nms import pth_nms
+# from .lib.nms.gpu_nms import gpu_nms
 from .model import RetinaNet, RetinaNetEncoder
 
 model_urls = {
@@ -63,10 +64,13 @@ class ResNetEncoder(RetinaNetEncoder):
 
         return nn.Sequential(*layers)
 
-    def forward(self, inputs):
+    def forward(self, inputs, fc = False):
+        
         img_batch = inputs
-
-        x = torch.cat([img_batch, img_batch, img_batch], dim=1)
+        if fc == True:
+            x=img_batch
+        else:
+            x = torch.cat([img_batch, img_batch, img_batch], dim=1)
 
         x = self.conv1(x)
         x = self.bn1(x)

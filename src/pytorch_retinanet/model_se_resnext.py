@@ -97,10 +97,14 @@ class SeResNetXtEncoder(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, inputs):
+    def forward(self, inputs, fc = False):
         img_batch = inputs
+        if fc == True:
+            x=img_batch
+        else:
+            x = torch.cat([img_batch, img_batch, img_batch], dim=1)
 
-        x = torch.cat([img_batch, img_batch, img_batch], dim=1)
+        # x = torch.cat([img_batch, img_batch, img_batch], dim=1)
         x = self.layer0(x)
         x1 = self.layer1(x)
         x2 = self.layer2(x1)

@@ -1,6 +1,7 @@
 import os
 import pickle
 import sys
+sys.path.append(".")
 from collections import defaultdict
 
 import matplotlib.pyplot as plt
@@ -14,12 +15,12 @@ from tqdm import tqdm
 import pydicom
 import pytorch_retinanet.dataloader
 import torch
-from .. config import CACHE_DIR, DATA_DIR, TRAIN_DIR
+from src.config import CACHE_DIR, DATA_DIR, TRAIN_DIR
 from imgaug import augmenters as iaa
 from torch.utils.data import Dataset
-from .. utils.utils import TransformCfg, timeit_context
+from src.utils.utils import TransformCfg, timeit_context
 
-#sys.path.append("/home/user/rsna/progs/rsna/src")
+
 
 
 class DetectionDataset(Dataset):
@@ -44,7 +45,7 @@ class DetectionDataset(Dataset):
         self.crop_source = crop_source
         self.augmentation_level = augmentation_level
         self.categories = ["No Lung Opacity / Not Normal", "Normal", "Lung Opacity"]
-        samples = pd.read_csv(os.path.join(DATA_DIR, "stage_1_train_labels.csv"))
+        samples = pd.read_csv(os.path.join(DATA_DIR, "stage_2_train_labels.csv"))
         samples = samples.merge(pd.read_csv(os.path.join(DATA_DIR, "folds.csv")), on="patientId", how="left")
 
         if self.debug:
